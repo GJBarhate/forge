@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #0a0a0f;
+    color: #e8e8f0;
+    font-family: 'DM Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #0a0a0f;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #7c6ff7 0%, #2dd4a0 100%);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #8f82ff 0%, #45deb4 100%);
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-purple text-white font-display font-semibold text-sm transition-all duration-150 hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-surface-2 text-[#e8e8f0] border border-white/10 font-display font-medium text-sm transition-all duration-150 hover:border-white/20 hover:bg-surface active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[#9999b8] font-medium text-sm transition-all duration-150 hover:text-[#e8e8f0] hover:bg-white/5 active:scale-95;
+  }
+
+  .card {
+    @apply bg-[#141420] border border-white/[0.07] rounded-xl p-5;
+  }
+
+  .card-hover {
+    @apply card transition-all duration-200 hover:border-white/[0.12] hover:-translate-y-px;
+  }
+
+  .input-base {
+    @apply w-full bg-[#0f0f17] border border-white/[0.07] rounded-lg px-4 py-2.5 text-[#e8e8f0] text-sm placeholder:text-[#5f5f80] outline-none transition-all duration-150 focus:border-purple/50 focus:ring-1 focus:ring-purple/20;
+  }
+
+  .label-base {
+    @apply block text-xs font-mono font-medium text-[#9999b8] uppercase tracking-wider mb-2;
+  }
+
+  .badge-purple {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-purple/15 text-purple-light border border-purple/30;
+  }
+
+  .badge-teal {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-teal/10 text-teal-light border border-teal/25;
+  }
+
+  .badge-coral {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-coral/10 text-coral-light border border-coral/25;
+  }
+
+  .badge-amber {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-amber/10 text-amber-light border border-amber/25;
+  }
+
+  .section-title {
+    @apply font-display font-semibold text-2xl text-white;
+  }
+
+  .page-container {
+    @apply max-w-6xl mx-auto px-6 py-8;
+  }
+}
+
+/* Waveform animation */
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+.waveform-bar {
+  animation: wave 1.2s ease-in-out infinite;
+}
+
+.waveform-bar:nth-child(2) { animation-delay: 0.1s; }
+.waveform-bar:nth-child(3) { animation-delay: 0.2s; }
+.waveform-bar:nth-child(4) { animation-delay: 0.3s; }
+.waveform-bar:nth-child(5) { animation-delay: 0.4s; }
+.waveform-bar:nth-child(6) { animation-delay: 0.3s; }
+.waveform-bar:nth-child(7) { animation-delay: 0.2s; }
+.waveform-bar:nth-child(8) { animation-delay: 0.1s; }

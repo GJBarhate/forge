@@ -1,0 +1,145 @@
+// forge-backend/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectStatus {
+  PROCESSING
+  COMPLETE
+  FAILED
+}
+
+enum ArtifactType {
+  PRD
+  SCHEMA
+  COMPONENT_TREE
+  TASK_BOARD
+  GITHUB_REPOS
+}
+
+enum CreditLogType {
+  INITIAL_SIGNUP
+  CHAT_USED
+  PURCHASE
+  REFUND
+  MONTHLY_RESET
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  name          String?
+  geminiApiKey  String?        @db.Text
+  creditsBalance Int           @default(20)  // 20 free chats per user
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  projects      Project[]
+  refreshTokens RefreshToken[]
+  creditLogs    CreditLog[]
+  payments      Payment[]
+}
+
+model Project {
+  id         String        @id @default(cuid())
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  status     ProjectStatus @default(PROCESSING)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  deletedAt  DateTime?
+  iterations Iteration[]
+
+  @@index([userId])
+  @@index([userId, createdAt])
+}
+
+model Iteration {
+  id         String        @id @default(cuid())
+  projectId  String
+  project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parentId   String?
+  parent     Iteration?    @relation("IterationTree", fields: [parentId], references: [id])
+  children   Iteration[]   @relation("IterationTree")
+  jobId      Int?          // Bull queue job ID — used for socket communication
+  voiceInput String?       @db.Text
+  imageUrl   String?
+  textInput  String?       @db.Text
+  status     ProjectStatus @default(PROCESSING)
+  createdAt  DateTime      @default(now())
+  artifacts  Artifact[]
+
+  @@index([projectId])
+  @@index([parentId])
+  @@index([projectId, createdAt])
+}
+
+model Artifact {
+  id          String       @id @default(cuid())
+  iterationId String
+  iteration   Iteration    @relation(fields: [iterationId], references: [id], onDelete: Cascade)
+  type        ArtifactType
+  content     Json
+  createdAt   DateTime     @default(now())
+
+  @@unique([iterationId, type])
+  @@index([iterationId])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, tokenHash])
+  @@index([userId])
+  @@index([expiresAt, revoked])
+}
+
+model CreditLog {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      CreditLogType
+  amount    Int            // +20 for purchase, -1 for chat usage
+  reason    String?        // Description of why credits changed
+  createdAt DateTime       @default(now())
+
+  @@index([userId])
+  @@index([userId, createdAt])
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  razorpayOrderId String        @unique
+  razorpayPaymentId String?     @unique
+  amount          Int           // Amount in paise (e.g., 99900 = ₹999)
+  creditsToAdd    Int           // Number of credits to add (usually 10 or 50)
+  status          PaymentStatus @default(PENDING)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([razorpayOrderId])
+  @@index([status])
+}
