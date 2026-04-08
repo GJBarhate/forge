@@ -33,16 +33,12 @@ export function createApp() {
   // 5. HTTP request logging
   app.use(requestLogger)
 
-  // 6. Global rate limiter (Redis-backed) — skip auth routes (they have their own limiter)
-  app.use((req, res, next) => {
-    // Don't apply global rate limit to auth endpoints
-    if (req.path.startsWith('/api/v1/auth')) return next()
-    // Apply global rate limit to everything else
-    return globalRateLimiter(req, res, next)
-  })
-
-  // 7. API routes
+  // 6. API routes FIRST (before global rate limiter)
+  // This ensures auth endpoints use their own limiter
   app.use('/api/v1', router)
+
+  // 7. Global rate limiter (Redis-backed) for non-API routes
+  app.use(globalRateLimiter)
 
   // 8. Health check (outside rate limit)
   app.get('/health', (_req, res) => {

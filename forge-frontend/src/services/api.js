@@ -17,18 +17,16 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Request interceptor — attach access token & handle rate limiting
+// Request interceptor — attach access token
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   
-  // Check if we're rate limited
+  // Check if we're rate limited and delay if needed
   if (rateLimitState.retryAfter > Date.now()) {
     const delay = rateLimitState.retryAfter - Date.now();
-    console.warn(`⏳ Rate limited. Retrying after ${Math.ceil(delay / 1000)}s`);
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(config), Math.min(delay, 5000));
-    });
+    // Log but don't delay - let the response interceptor handle it
+    console.warn(`⏳ Rate limited. Will retry after ${Math.ceil(delay / 1000)}s on 429 response`);
   }
   
   return config;
@@ -58,18 +56,20 @@ api.interceptors.response.use(
 
     // ✅ Handle 429 (Too Many Requests) - rate limiting
     if (status === 429) {
-      const retryAfter = parseInt(error.response?.headers['retry-after'] || '1', 10);
+      const retryAfter = parseInt(error.response?.headers['retry-after'] || '2', 10);
       rateLimitState.retryAfter = Date.now() + retryAfter * 1000;
-      console.warn(`⚠️ 429 Rate Limited! Retry after: ${retryAfter}s`);
+      console.warn(`⚠️ 429 Rate Limited! Retrying after ${retryAfter}s...`);
       
-      // Retry the request after delay
-      const delay = Math.min(retryAfter * 1000, 5000);
-      return new Promise((resolve) => {
+      // Add longer delay for rate limiting (at least 2 seconds)
+      const delay = Math.max(retryAfter * 1000, 2000);
+      return new Promise((resolve, reject) => {
         setTimeout(() => {
-          api(originalRequest).then(resolve).catch((err) => {
-            console.error('Retry failed after rate limit:', err.message);
-            Promise.reject(err);
-          });
+          api(originalRequest)
+            .then(resolve)
+            .catch((retryErr) => {
+              console.error('Request failed after rate limit retry:', retryErr?.message);
+              reject(retryErr);
+            });
         }, delay);
       });
     }

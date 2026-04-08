@@ -152,10 +152,13 @@ export default function DashboardPage() {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["projects"],
     queryFn: projectService.getAll,
-    retry: 3, // ✅ Retry up to 3 times on failure
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // ✅ Exponential backoff
-    staleTime: 30000, // ✅ Keep data fresh for 30s
-    gcTime: 5 * 60 * 1000, // ✅ Keep cached data for 5 minutes
+    retry: 2, // Reduced from 3 to avoid rate limiting
+    retryDelay: (attemptIndex) => {
+      // 3s, 7s delays with jitter
+      return (attemptIndex + 1) * 3000 + Math.random() * 2000;
+    },
+    staleTime: 30000, // Keep data fresh for 30s
+    gcTime: 5 * 60 * 1000, // Keep cached data for 5 minutes
   });
 
   // Listen for job completions and refresh projects

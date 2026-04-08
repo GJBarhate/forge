@@ -16,8 +16,12 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,
-      retry: 3, // ✅ Increased retry attempts
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // ✅ Exponential backoff
+      retry: 2, // Reduced from 3 to avoid overwhelming rate limiter
+      retryDelay: (attemptIndex) => {
+        // Longer delays: 2s, 5s
+        const baseDelay = 2000;
+        return baseDelay * (attemptIndex + 1) + Math.random() * 1000;
+      },
       refetchOnWindowFocus: false,
     },
   },

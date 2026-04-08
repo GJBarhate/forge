@@ -8,41 +8,39 @@ export default function AuthGuard() {
   const { isAuthenticated, isLoading, setAuth, clearAuth, setLoading, initializeAuth } = useAuthStore();
 
   useEffect(() => {
-    // Initialize auth from localStorage first
-    initializeAuth();
-  }, [initializeAuth]);
-
-  useEffect(() => {
-    // If already authenticated, don't refresh
-    if (isAuthenticated) {
-      setLoading(false);
-      return;
-    }
-
-    // Only try to refresh if not loading and not already authenticated
-    if (isLoading) {
-      const init = async () => {
+    const initAuth = async () => {
+      try {
+        // Step 1: Initialize from localStorage (synchronous)
+        initializeAuth();
+        
+        // Step 2: Try to refresh token to validate session
+        // This checks if the refresh token cookie is still valid
         try {
-          const response = await authService.refresh();
-          const { accessToken, user } = response;
+          const { accessToken, user } = await authService.refresh();
           
           if (user && accessToken) {
+            // Refresh successful, update auth with fresh token
             setAuth(user, accessToken);
-            setLoading(false);
           } else {
+            // No user/token in refresh response, clear auth
             clearAuth();
-            setLoading(false);
           }
-        } catch (err) {
-          console.error('Auth refresh failed:', err);
+        } catch (refreshErr) {
+          // Refresh failed (no valid refresh token or network error)
+          // Just clear auth, don't redirect - let AuthGuard handle it
           clearAuth();
-          setLoading(false);
         }
-      };
-      
-      init();
-    }
-  }, [isAuthenticated, isLoading, setAuth, clearAuth, setLoading]);
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+        clearAuth();
+      } finally {
+        // Mark loading as complete
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+  }, [setAuth, clearAuth, setLoading, initializeAuth]);
 
   if (isLoading) {
     return (

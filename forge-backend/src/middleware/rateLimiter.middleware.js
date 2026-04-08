@@ -4,12 +4,23 @@ import { RedisStore } from 'rate-limit-redis'
 import { redisClient } from '../config/redis.js'
 import { config } from '../config/env.js'
 
-// Global: 100 requests per 15 minutes per IP
+// Determine rate limits based on environment
+const isDev = config.NODE_ENV === 'development'
+
+// Global rate limiter
+// Dev: 50,000/hour (very permissive for testing)
+// Prod: 5,000/hour (reasonable for public API)
 export const globalRateLimiter = rateLimit({
-  windowMs: config.RATE_LIMIT_WINDOW_MS,
-  max: config.RATE_LIMIT_MAX,
+  windowMs: 60 * 60 * 1000,  // 1 hour
+  max: isDev ? 50000 : 5000,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Don't rate limit these critical endpoints
+    if (req.path.includes('/auth/refresh')) return true
+    if (req.path.includes('/health')) return true
+    return false
+  },
   store: new RedisStore({
     sendCommand: (...args) => redisClient.call(...args),
   }),
@@ -19,10 +30,12 @@ export const globalRateLimiter = rateLimit({
   },
 })
 
-// AI endpoints: 10 requests per hour per authenticated user
+// AI endpoints: per authenticated user
+// Dev: 1000/hour (testing)
+// Prod: 100/hour (prevent abuse)
 export const aiRateLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: config.AI_RATE_LIMIT_MAX,
+  windowMs: 60 * 60 * 1000,  // 1 hour
+  max: isDev ? 1000 : 100,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => `ai:${req.user?.id ?? req.ip}`,
@@ -35,18 +48,20 @@ export const aiRateLimiter = rateLimit({
   },
 })
 
-// ✅ Auth endpoints: 100 login/register attempts per 15 minutes per IP (for development/testing)
+// Auth endpoints: login/register
+// Dev: 1000/hour (heavy testing)
+// Prod: 30 per 15 minutes (prevent brute force)
 export const authRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,  // 15 minutes
-  max: 100,  // Increased to 100 for development - production should be much lower
+  windowMs: isDev ? 60 * 60 * 1000 : 15 * 60 * 1000,
+  max: isDev ? 1000 : 30,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.path === '/refresh',  // Don't rate limit refresh token endpoint
+  skip: (req) => req.path.includes('/refresh'),  // Don't rate limit refresh token endpoint
   store: new RedisStore({
     sendCommand: (...args) => redisClient.call(...args),
   }),
   message: {
     success: false,
-    error: 'Too many login attempts. Please try again in 15 minutes.',
+    error: isDev ? 'Too many login attempts. Try again soon.' : 'Too many login attempts. Try again in 15 minutes.',
   },
 })

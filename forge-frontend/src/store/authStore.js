@@ -38,15 +38,17 @@ export const useAuthStore = create((set, get) => ({
       
       if (savedToken && savedUser) {
         const user = JSON.parse(savedUser);
-        set({ user, accessToken: savedToken, isAuthenticated: true, isLoading: false });
+        // Keep isLoading: true until refresh validation completes
+        set({ user, accessToken: savedToken, isAuthenticated: true, isLoading: true });
       } else {
-        set({ isLoading: false });
+        // No saved auth, but keep loading until refresh attempt completes
+        set({ user: null, accessToken: null, isAuthenticated: false, isLoading: true });
       }
     } catch (err) {
       console.error('Failed to initialize auth from localStorage:', err);
       localStorage.removeItem(AUTH_TOKEN_KEY);
       localStorage.removeItem(AUTH_USER_KEY);
-      set({ isLoading: false });
+      set({ user: null, accessToken: null, isAuthenticated: false, isLoading: true });
     }
   },
 
