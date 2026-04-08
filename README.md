@@ -153,48 +153,6 @@ User Input → POST /forge/generate → Bull Queue → Forge Worker
 
 ---
 
-## 🗄️ Database Schema
-
-```prisma
-model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
-  passwordHash   String
-  name           String?
-  creditsBalance Int       @default(20)
-  projects       Project[]
-}
-
-model Project {
-  id         String        @id @default(cuid())
-  userId     String
-  name       String
-  status     ProjectStatus @default(PROCESSING)  // PROCESSING | COMPLETE | FAILED
-  deletedAt  DateTime?                            // Soft delete
-  iterations Iteration[]
-}
-
-model Iteration {
-  id        String        @id @default(cuid())
-  projectId String
-  parentId  String?                               // Supports branching
-  jobId     Int?                                  // Bull queue job (for WebSocket room)
-  status    ProjectStatus @default(PROCESSING)
-  artifacts Artifact[]
-}
-
-model Artifact {
-  id          String       @id @default(cuid())
-  iterationId String
-  type        ArtifactType  // PRD | SCHEMA | COMPONENT_TREE | TASK_BOARD | GITHUB_REPOS
-  content     Json
-
-  @@unique([iterationId, type])
-}
-```
-
----
-
 ## ⚙️ Getting Started
 
 ### Prerequisites
