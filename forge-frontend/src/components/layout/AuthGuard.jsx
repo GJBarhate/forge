@@ -16,19 +16,34 @@ export default function AuthGuard() {
         // Step 2: Try to refresh token to validate session
         // This checks if the refresh token cookie is still valid
         try {
+          console.log('🔄 [AuthGuard] Attempting to refresh token...');
           const { accessToken, user } = await authService.refresh();
           
           if (user && accessToken) {
             // Refresh successful, update auth with fresh token
+            console.log('✅ [AuthGuard] Token refreshed successfully for:', user.email);
             setAuth(user, accessToken);
           } else {
             // No user/token in refresh response, clear auth
+            console.warn('⚠️ [AuthGuard] No user/token in refresh response');
             clearAuth();
           }
         } catch (refreshErr) {
           // Refresh failed (no valid refresh token or network error)
-          // Just clear auth, don't redirect - let AuthGuard handle it
-          clearAuth();
+          // Check if we have cached auth from localStorage
+          console.warn('⚠️ [AuthGuard] Refresh failed:', refreshErr?.message);
+          
+          // If localStorage has auth data, try to use it temporarily
+          // The app can work with the access token even if refresh fails
+          // as long as the token isn't expired
+          const savedToken = localStorage.getItem('forge_auth_token');
+          if (savedToken) {
+            console.log('💾 [AuthGuard] Using cached token from localStorage');
+            // Keep the auth state as-is, just mark loading as complete
+            // The app will use the cached token until it expires
+          } else {
+            clearAuth();
+          }
         }
       } catch (err) {
         console.error('Auth initialization error:', err);

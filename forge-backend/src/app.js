@@ -16,10 +16,26 @@ export function createApp() {
   app.use(helmet())
 
   // 2. CORS — allow frontend origin with credentials
+  const allowedOrigins = [config.CLIENT_URL];
+  if (process.env.NODE_ENV === 'development') {
+    allowedOrigins.push('http://localhost:5173', 'http://localhost:3000');
+  }
+  
   app.use(
     cors({
-      origin: config.CLIENT_URL,
+      origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          console.warn(`⚠️ [CORS] Rejected origin: ${origin}`);
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
       credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      maxAge: 86400, // 24 hours
     })
   )
 

@@ -48,41 +48,52 @@ export async function login({ email, password }) {
 
 export async function refresh(rawRefreshToken) {
   if (!rawRefreshToken) {
-    throw new ApiError(401, 'Refresh token missing')
+    console.error('❌ [Refresh] Token missing from cookies');
+    throw new ApiError(401, 'Refresh token missing - cookie not received')
   }
 
-  // Verify JWT signature
-  const decoded = verifyRefreshToken(rawRefreshToken)
+  try {
+    // Verify JWT signature
+    const decoded = verifyRefreshToken(rawRefreshToken)
 
-  // Look up the hashed token in DB using compound key (userId + tokenHash)
-  const tokenHash = hashToken(rawRefreshToken)
-  const storedToken = await prisma.refreshToken.findUnique({ 
-    where: { 
-      userId_tokenHash: {
-        userId: decoded.id,
-        tokenHash,
-      }
-    } 
-  })
+    // Look up the hashed token in DB using compound key (userId + tokenHash)
+    const tokenHash = hashToken(rawRefreshToken)
+    const storedToken = await prisma.refreshToken.findUnique({ 
+      where: { 
+        userId_tokenHash: {
+          userId: decoded.id,
+          tokenHash,
+        }
+      } 
+    })
 
-  if (!storedToken || storedToken.revoked || storedToken.expiresAt < new Date()) {
-    throw new ApiError(401, 'Token expired or revoked')
+    if (!storedToken || storedToken.revoked || storedToken.expiresAt < new Date()) {
+      console.warn('⚠️ [Refresh] Token invalid or expired for user:', decoded.id);
+      throw new ApiError(401, 'Token expired or revoked')
+    }
+
+    // Issue a new access token (do not rotate refresh token — keep session alive)
+    const accessToken = signAccessToken({ id: decoded.id })
+
+    // Fetch user data to return with new token
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, email: true, name: true, creditsBalance: true, geminiApiKey: true, createdAt: true },
+    })
+
+    if (!user) {
+      throw new ApiError(401, 'User not found')
+    }
+
+    console.log('✅ [Refresh] Token refreshed for user:', user.email);
+    return { accessToken, user }
+  } catch (err) {
+    if (err.name === 'JsonWebTokenError') {
+      console.error('❌ [Refresh] Invalid token signature:', err.message);
+      throw new ApiError(401, 'Invalid refresh token');
+    }
+    throw err;
   }
-
-  // Issue a new access token (do not rotate refresh token — keep session alive)
-  const accessToken = signAccessToken({ id: decoded.id })
-
-  // Fetch user data to return with new token
-  const user = await prisma.user.findUnique({
-    where: { id: decoded.id },
-    select: { id: true, email: true, name: true, creditsBalance: true, geminiApiKey: true, createdAt: true },
-  })
-
-  if (!user) {
-    throw new ApiError(401, 'User not found')
-  }
-
-  return { accessToken, user }
 }
 
 export async function logout(rawRefreshToken) {

@@ -3,7 +3,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useAuthStore } from '../store/authStore.js';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 
 console.log(`\n🔌 [Socket] Configuration`);
 console.log(`  URL: ${SOCKET_URL}`);

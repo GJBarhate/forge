@@ -28,6 +28,17 @@ export const login = asyncHandler(async (req, res) => {
 
 export const refresh = asyncHandler(async (req, res) => {
   const token = req.cookies?.[COOKIE_NAME]
+  
+  if (!token) {
+    console.warn('⚠️ [Auth] Refresh token cookie missing. Cookies received:', Object.keys(req.cookies || {}));
+    console.warn('⚠️ [Auth] Request origin:', req.get('origin'));
+    console.warn('⚠️ [Auth] Request headers:', {
+      'content-type': req.get('content-type'),
+      'user-agent': req.get('user-agent'),
+      'cookie': req.get('cookie') ? 'present' : 'missing'
+    });
+  }
+  
   const { accessToken, user } = await authService.refresh(token)
 
   res.status(200).json({ success: true, data: { accessToken, user } })
