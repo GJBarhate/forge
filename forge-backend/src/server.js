@@ -13,7 +13,7 @@ import { initSocket } from './socket/socket.manager.js'
 import { setSocketIO } from './queue/forge.worker.js'
 
 async function bootstrap() {
-  // Connect to database
+  // Connect to database (will run migrations in production)
   await connectDatabase()
 
   // Create Express app
