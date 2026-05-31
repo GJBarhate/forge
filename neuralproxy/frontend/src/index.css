@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-purple: #7F77DD;
+  --color-teal: #1D9E75;
+  --color-amber: #EF9F27;
+  --color-coral: #D85A30;
+  --color-surface: #F8F7F4;
+  --color-border: #E5E4DF;
+  --color-text: #1A1A18;
+  --color-muted: #6B6A65;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background-color: #c4c0f0;
+  color: #1A1A18;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #7F77DD;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6560c4;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-thumb {
+  background: #5f59b5;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+/* Override for transform-only transitions */
+.no-transition * {
+  transition: none;
+}

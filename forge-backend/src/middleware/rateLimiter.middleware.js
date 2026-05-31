@@ -28,6 +28,8 @@ export const globalRateLimiter = rateLimit({
     success: false,
     error: 'Too many requests, please try again later.',
   },
+  // This will use X-Forwarded-For header when trust proxy is set
+  keyGenerator: (req) => req.ip,
 })
 
 // AI endpoints: per authenticated user

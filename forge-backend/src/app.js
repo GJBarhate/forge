@@ -12,6 +12,9 @@ import { router } from './routes/index.js'
 export function createApp() {
   const app = express()
 
+  // 0. Trust proxy (required for X-Forwarded-For header in production)
+  app.set('trust proxy', 1)
+
   // 1. Security headers
   app.use(helmet())
 
