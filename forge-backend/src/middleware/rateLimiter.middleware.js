@@ -7,11 +7,45 @@ import { config } from '../config/env.js'
 // Determine rate limits based on environment
 const isDev = config.NODE_ENV === 'development'
 
-// Memory store as fallback when Redis is down
-import RedisMemoryStore from 'rate-limit-redis'
-import MemoryStore from 'express-rate-limit/lib/stores/memory-store.js'
+// In-memory store for fallback
+class InMemoryStore {
+  constructor() {
+    this.hits = new Map()
+    this.resets = new Map()
+  }
+
+  incr(key, cb) {
+    if (!this.hits.has(key)) {
+      this.hits.set(key, 0)
+      this.resets.set(key, Date.now() + 60 * 60 * 1000)
+    }
+
+    const reset = this.resets.get(key)
+    if (Date.now() > reset) {
+      this.hits.set(key, 0)
+      this.resets.set(key, Date.now() + 60 * 60 * 1000)
+    }
+
+    const hits = this.hits.get(key) + 1
+    this.hits.set(key, hits)
+    cb(null, hits)
+  }
+
+  decrement(key, cb) {
+    const hits = Math.max(0, (this.hits.get(key) || 0) - 1)
+    this.hits.set(key, hits)
+    cb(null, hits)
+  }
+
+  resetKey(key, cb) {
+    this.hits.delete(key)
+    this.resets.delete(key)
+    cb(null)
+  }
+}
 
 let isRedisHealthy = true
+const memoryStore = new InMemoryStore()
 
 // Monitor Redis connection health
 redisClient.on('error', () => {
@@ -33,7 +67,7 @@ const getStore = () => {
     })
   }
   // Fallback to memory store
-  return new MemoryStore()
+  return memoryStore
 }
 
 // Global rate limiter
