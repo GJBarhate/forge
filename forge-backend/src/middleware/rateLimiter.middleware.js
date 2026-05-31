@@ -7,6 +7,35 @@ import { config } from '../config/env.js'
 // Determine rate limits based on environment
 const isDev = config.NODE_ENV === 'development'
 
+// Memory store as fallback when Redis is down
+import RedisMemoryStore from 'rate-limit-redis'
+import MemoryStore from 'express-rate-limit/lib/stores/memory-store.js'
+
+let isRedisHealthy = true
+
+// Monitor Redis connection health
+redisClient.on('error', () => {
+  isRedisHealthy = false
+  console.warn('⚠️ Redis unavailable - switching to memory store for rate limiting')
+})
+
+redisClient.on('connect', () => {
+  isRedisHealthy = true
+  console.log('✅ Redis recovered - rate limiter back to Redis store')
+})
+
+// Helper to get the appropriate store
+const getStore = () => {
+  if (isRedisHealthy && redisClient.status === 'ready') {
+    return new RedisStore({
+      sendCommand: (...args) => redisClient.call(...args),
+      prefix: 'rl:', // rate limit prefix
+    })
+  }
+  // Fallback to memory store
+  return new MemoryStore()
+}
+
 // Global rate limiter
 // Dev: 50,000/hour (very permissive for testing)
 // Prod: 5,000/hour (reasonable for public API)
@@ -21,16 +50,21 @@ export const globalRateLimiter = rateLimit({
     if (req.path.includes('/health')) return true
     return false
   },
-  store: new RedisStore({
-    sendCommand: (...args) => redisClient.call(...args),
-  }),
+  store: getStore(),
   message: {
     success: false,
     error: 'Too many requests, please try again later.',
   },
   // This will use X-Forwarded-For header when trust proxy is set
   keyGenerator: (req) => req.ip,
+  handler: (req, res) => {
+    res.status(429).json({
+      success: false,
+      error: 'Too many requests, please try again later.',
+    })
+  },
 })
+
 
 // AI endpoints: per authenticated user
 // Dev: 1000/hour (testing)
@@ -41,12 +75,16 @@ export const aiRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => `ai:${req.user?.id ?? req.ip}`,
-  store: new RedisStore({
-    sendCommand: (...args) => redisClient.call(...args),
-  }),
+  store: getStore(),
   message: {
     success: false,
     error: 'AI generation limit reached. Please wait before generating again.',
+  },
+  handler: (req, res) => {
+    res.status(429).json({
+      success: false,
+      error: 'AI generation limit reached. Please wait before generating again.',
+    })
   },
 })
 
@@ -59,11 +97,15 @@ export const authRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => req.path.includes('/refresh'),  // Don't rate limit refresh token endpoint
-  store: new RedisStore({
-    sendCommand: (...args) => redisClient.call(...args),
-  }),
+  store: getStore(),
   message: {
     success: false,
     error: isDev ? 'Too many login attempts. Try again soon.' : 'Too many login attempts. Try again in 15 minutes.',
+  },
+  handler: (req, res) => {
+    res.status(429).json({
+      success: false,
+      error: isDev ? 'Too many login attempts. Try again soon.' : 'Too many login attempts. Try again in 15 minutes.',
+    })
   },
 })
