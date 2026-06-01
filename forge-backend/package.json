@@ -16,7 +16,7 @@
   "dependencies": {
     "@google/genai": "^1.48.0",
     "@google/generative-ai": "^0.24.1",
-    "@prisma/client": "^5.10.2",
+    "@prisma/client": "^6.16.0",
     "bcryptjs": "^2.4.3",
     "bull": "^4.12.2",
     "cookie-parser": "^1.4.6",
@@ -37,7 +37,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "prisma": "^5.10.2"
+    "prisma": "^6.16.0"
   },
   "engines": {
     "node": ">=20.0.0"
