@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "start": "npm run db:push && node src/server.js",
+    "build": "npx prisma db push --skip-generate --accept-data-loss",
+    "start": "node src/server.js",
     "db:push": "npx prisma db push --skip-generate --accept-data-loss",
     "dev": "node --watch src/server.js",
     "db:generate": "prisma generate",
