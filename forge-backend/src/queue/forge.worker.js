@@ -72,9 +72,10 @@ forgeQueue.process('generate', async (job) => {
         emit(jobId, 'job:progress', { progress: 30, step: 'Competitor analysis complete.', projectId, iterationId })
       } catch (err) {
         console.warn(`[ForgeWorker] Competitor analysis failed for job ${job.id}:`, err.message)
+        // ✅ FIXED: Notify user that competitor analysis failed but continue
         emit(jobId, 'job:progress', {
           progress: 30,
-          step: 'Competitor analysis skipped — continuing with generation.',
+          step: 'Competitor analysis skipped (fetch failed) - continuing with generation.',
           projectId,
           iterationId,
         })
@@ -85,10 +86,24 @@ forgeQueue.process('generate', async (job) => {
     let githubRepos = []
     try {
       const searchQuery = textInput || voiceTranscript || 'project'
+      await job.progress(35)
+      emit(jobId, 'job:progress', {
+        progress: 35,
+        step: 'Searching GitHub for related repositories...',
+        projectId,
+        iterationId,
+      })
       githubRepos = await searchGitHubRepos(searchQuery)
       console.log(`[ForgeWorker] Found ${githubRepos.length} related GitHub repos`)
     } catch (err) {
       console.warn(`[ForgeWorker] GitHub search failed:`, err.message)
+      // ✅ FIXED: Notify user that GitHub search failed but continue
+      emit(jobId, 'job:progress', {
+        progress: 35,
+        step: 'GitHub search temporarily unavailable - continuing without repo references',
+        projectId,
+        iterationId,
+      })
       // GitHub search is optional — continue without it
     }
 
@@ -103,6 +118,9 @@ forgeQueue.process('generate', async (job) => {
       iterationId,
     })
 
+    // ✅ FIXED: Log that we're making the API call
+    console.log(`[ForgeWorker] Step 3: Calling Gemini API (this may take 10-30 seconds)...`);
+    
     const blueprint = await generateBlueprint({
       voiceTranscript,
       imageBase64,
@@ -111,6 +129,16 @@ forgeQueue.process('generate', async (job) => {
       competitorAnalysis,
       githubRepos,              // ← NEW: pass GitHub repos
       userGeminiApiKey,        // ← NEW: pass to gemini.service
+    })
+
+    // ✅ FIXED: Confirm we got response and add progress event
+    console.log(`[ForgeWorker] Step 3: Gemini response received - validating and parsing...`);
+    await job.progress(65)
+    emit(jobId, 'job:progress', { 
+      progress: 65, 
+      step: 'Gemini response received - Validating and parsing blueprint...', 
+      projectId, 
+      iterationId 
     })
 
     // ── Step 3.5: Skip credit deduction here - will deduct after completion ──

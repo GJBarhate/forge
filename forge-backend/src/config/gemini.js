@@ -83,8 +83,9 @@ export const geminiModel = {
           const failedKeyIndex = (currentKeyIndex - 1 + apiKeys.length) % apiKeys.length
           exhaustedKeys.add(failedKeyIndex)
           
+          const keyPreview = apiKeys[failedKeyIndex].substring(0, 20) + '...'
           console.warn(
-            `⚠️  [Gemini] Key ${failedKeyIndex} quota exceeded. ` +
+            `⚠️  [Gemini] Key ${failedKeyIndex} (${keyPreview}) quota exceeded. ` +
             `Switching to next key... (${apiKeys.length - exhaustedKeys.size} keys remaining)`
           )
           

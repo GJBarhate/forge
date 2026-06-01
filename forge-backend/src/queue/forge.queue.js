@@ -10,6 +10,14 @@ console.log('🔄 Initializing Forge queue...')
 export const forgeQueue = new Bull('forge-generation', config.REDIS_URL, {
   redis: {
     tls: {}, // ✅ REQUIRED for Upstash
+    // ✅ FIXED: Reduced retry strategy for Bull compatibility
+    retryStrategy: (times) => {
+      const delay = Math.min(times * 100, 5000)
+      return delay
+    },
+    keepAlive: 60000,
+    connectTimeout: 20000,
+    commandTimeout: 15000,
   },
 
   defaultJobOptions: {

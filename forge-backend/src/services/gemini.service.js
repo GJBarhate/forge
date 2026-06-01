@@ -46,9 +46,20 @@ export async function generateBlueprint({
       });
     }
 
-    const result = await selectedModel.generateContent({
-      contents: [{ role: 'user', parts }],
-    });
+    // ✅ FIXED: Add timeout to prevent infinite waiting
+    const timeoutMs = 45000; // 45 second timeout
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error(`Gemini API timeout (>45s) - slow internet or service degradation`)), timeoutMs)
+    );
+
+    // Race between Gemini call and timeout
+    const result = await Promise.race([
+      selectedModel.generateContent({
+        contents: [{ role: 'user', parts }],
+      }),
+      timeoutPromise
+    ]);
+    
     rawText = result.response.text();
 
     const msg = 'Gemini raw response received with ' + usedKeyType + ' key (first 300 chars)';
@@ -62,6 +73,11 @@ export async function generateBlueprint({
       } else {
         throw new ApiError(429, 'All server Gemini keys exceeded quota. Try adding your own key.');
       }
+    }
+
+    // ✅ FIXED: Better timeout error message
+    if (err.message.includes('timeout')) {
+      throw new ApiError(504, `Gemini API is responding slowly (${err.message}). Please try again in a moment.`);
     }
 
     throw new ApiError(503, 'Gemini API error: ' + err.message);
